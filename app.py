@@ -1,11 +1,11 @@
-import streamlit as st
 import os
-api_key = os.environ["OPENAI_API_KEY"]
-
-from openai import OpenAI
-import tiktoken
 import json
+import tiktoken
+import streamlit as st
+from openai import OpenAI
 from datetime import datetime
+
+secret_password = st.secrets["SECRET_PASSWORD"]
 
 class ConversationManager:
     def __init__(self, api_key, base_url="https://api.openai.com/v1", history_file=None, default_model="gpt-3.5-turbo", default_temperature=0.7, default_max_tokens=150, token_budget=4096):
@@ -130,3 +130,24 @@ class ConversationManager:
             self.save_conversation_history()  # Attempt to save the reset history to the file
         except Exception as e:
             print(f"An unexpected error occurred while resetting the conversation history: {e}")
+
+
+# Streamlit code
+st.title("Welcome to AI Chatbot!")
+st.header("Enter your name and API key to get started:")
+
+
+# Collect name and API key, store in session state
+if 'name' not in st.session_state:
+    name = st.text_input("Name:")
+    st.session_state['name'] = name
+else:
+    name = st.session_state['name']
+
+if 'api_key' not in st.session_state:
+    api_key = st.text_input("API Key:", type="password")
+    if api_key == secret_password:
+        api_key = st.secrets["OPENAI_API_KEY"]
+    st.session_state['api_key'] = api_key
+else:
+    api_key = st.session_state['api_key']
