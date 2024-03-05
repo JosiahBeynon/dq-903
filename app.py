@@ -133,21 +133,104 @@ class ConversationManager:
 
 
 # Streamlit code
-st.title("Welcome to AI Chatbot!")
+st.title("Welcome to my AI Chatbot!")
 st.header("Enter your name and API key to get started:")
 
 
 # Collect name and API key, store in session state
-if 'name' not in st.session_state:
+with st.expander("Enter your name and API key to get started:", expanded=True):
     name = st.text_input("Name:")
-    st.session_state['name'] = name
-else:
-    name = st.session_state['name']
+    if name not in st.session_state:
+        st.session_state['name'] = name
+    else:
+        name = st.session_state['name']
 
-if 'api_key' not in st.session_state:
-    api_key = st.text_input("API Key:", type="password")
+    api_key = st.text_input("OpenAI API Key:", type="password")
     if api_key == secret_password:
         api_key = st.secrets["OPENAI_API_KEY"]
-    st.session_state['api_key'] = api_key
-else:
-    api_key = st.session_state['api_key']
+    if api_key not in st.session_state:
+        st.session_state['api_key'] = api_key
+    else:
+        api_key = st.session_state['api_key']
+    
+with st.expander('Why do I need to provide an API key? :confused:'):
+    st.write('''
+            Using AI APIs has a very small cost. On an individual scale, it's
+            barely noticeable (especially as you get free credits on creating
+            an account). However, if hundreds or thousands of people use an app
+            the cost can skyrocket.
+
+            Also, there are now bots scanning the internet for unprotected
+            API access. They predate on otherwise safe-to-be-free apps and
+            use them for bulk AI calls.
+
+            Making your own API key is really easy. Head to 
+            [OpenAi's website](https://platform.openai.com/api-keys) (create an
+            account if you don't already have one), navigate to API keys, and
+            create a new key. Then simply paste it in the above box.
+
+''')
+
+with st.expander('Do you store my API key? Is it safe? :worried:'):
+    st.write('''
+            I (the developer) have no access to your API key. The app temporarily
+            stores it as a [sesion state](https://docs.streamlit.io/library/api-reference/session-state).
+            
+            Each time you open this app, you create a new session, that's treated
+             seperately to any other simultaneous sessions. And when you close the
+             tab, the session ends and all information stored in the sesssion
+             state is wiped.
+
+
+             If you're still worried, you can check the source code of the app
+             [here](https://github.com/JosiahBeynon/dq-903). You can also create
+             a new API key just for this use, then delete it afterwards.
+''')
+
+# Initialize ConversationManager
+if 'chat_manager' not in st.session_state:
+    st.session_state['chat_manager'] = ConversationManager(api_key)
+
+chat_manager = st.session_state['chat_manager']
+
+# Create sidebar
+with st.sidebar:
+
+    def reset_sliders():
+        '''Resets sliders to default'''
+        st.session_state['temperature'] = 0.7
+        st.session_state['max_tokens'] = 200
+
+    # Initialize session state values if neede
+    if 'temperature' not in st.session_state and 'max_tokens' not in st.session_state:
+        reset_sliders()
+
+    # Create sliders
+    temperature = st.slider("Select model temperature", min_value=0.0, max_value=1.3,
+                            step=0.01,key='temperature'
+                             )
+    max_tokens = st.slider("Choose max tokens", min_value=5, max_value=2000,
+                            value=200, step=5, key='max_tokens'
+                            )
+    st.button("Reset sliders", on_click=reset_sliders)
+
+    # Allow user to choose AI feel
+    system_message = st.sidebar.selectbox("Choose your AI personality",
+                                          ['Sassy', 'Angry', 'Thoughtful', 'Custom']
+                                          )
+    if system_message == 'Sassy':
+        chat_manager.set_persona('sassy_assistant')
+    elif system_message == 'Angry':
+        chat_manager.set_persona('angry_assistant')
+    elif system_message == 'Thoughtful':
+        chat_manager.set_persona('thoughtful_assistant')
+    # Allow user input if 'Custom' is selected
+    elif system_message == 'Custom':
+        custom_message = st.text_area("Custom system message")
+        if st.sidebar.button("Build your custom AI personality"):
+            chat_manager.set_custom_system_message(custom_message)
+            st.write(':tada: Personality updated :tada:')
+
+
+    if st.sidebar.button("Reset conversation history", on_click=chat_manager.reset_conversation_history):
+        st.session_state['conversation_history'] = chat_manager.conversation_history
