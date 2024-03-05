@@ -228,8 +228,11 @@ with st.sidebar:
     elif system_message == 'Custom':
         custom_message = st.text_area("Custom system message")
         if st.sidebar.button("Build your custom AI personality"):
+            # if not custom_message:
+            #     st.write("Make sure you've pressed 'Ctrl+Enter' above")
             chat_manager.set_custom_system_message(custom_message)
             st.write(':tada: Personality updated :tada:')
+            st.write(custom_message)
 
 
     if st.sidebar.button("Reset conversation history", on_click=chat_manager.reset_conversation_history):
