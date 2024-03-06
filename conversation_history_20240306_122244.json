@@ -1,0 +1,22 @@
+[
+    {
+        "role": "system",
+        "content": "You are a helpful assistant."
+    },
+    {
+        "role": "user",
+        "content": "arstars"
+    },
+    {
+        "role": "assistant",
+        "content": "It seems like you may have made a typo. Did you mean \"avatars\" or something else? Let me know how I can assist you!"
+    },
+    {
+        "role": "user",
+        "content": "Sing a song in french that rhymes"
+    },
+    {
+        "role": "assistant",
+        "content": "Here is a simple French nursery rhyme that rhymes:\n\nFais dodo, Colas mon p'tit fr\u00e8re,\nFais dodo, t'auras du lolo.\nMaman est en haut,\nQui fait du g\u00e2teau,\nPapa est en bas,\nQui fait du chocolat.\n\nI hope you enjoyed this little rhyme! Let me know if you would like to hear more."
+    }
+]

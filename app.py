@@ -10,7 +10,9 @@ secret_password = st.secrets["SECRET_PASSWORD"]
 
 class ConversationManager:
     def __init__(self, api_key, base_url="https://api.openai.com/v1/chat/completions", history_file=None, default_model="gpt-3.5-turbo", default_temperature=0.7, default_max_tokens=150, token_budget=4096):
-        self.client = OpenAI(api_key=api_key)
+        self.api_key = api_key
+        # self.api_key = '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'
+        self.client = OpenAI(api_key=self.api_key)
         self.base_url = base_url
         if history_file is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -92,27 +94,34 @@ class ConversationManager:
 
         self.enforce_token_budget()
 
-        print('test', temperature, max_tokens, model)
+        try:
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=self.conversation_history,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
 
-    # try:
-        response = self.client.chat.completions.create(
-            model=model,
-            messages=self.conversation_history,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
-        print("API Response:", response)  # Debugging line to inspect the raw response
-    # except Exception as e:
-    #     print(f"An error occurred while generating a response: {e}")
-    #     return None
+            ai_response = response.choices[0].message.content
 
-        ai_response = response.choices[0].message.content
-        print("Extracted AI Response:", ai_response)  # Debugging line to inspect the extracted response
+            self.conversation_history.append({"role": "assistant", "content": ai_response})
+            self.save_conversation_history()
 
-        self.conversation_history.append({"role": "assistant", "content": ai_response})
-        self.save_conversation_history()
+            return ai_response
 
-        return ai_response
+        except Exception as e:
+            error_message = str(e)
+            # Check if the error message is related to an incorrect API key
+            if "Incorrect API key" in error_message:
+                # Use st.error to display a message in the Streamlit interface
+                st.error("Failed to authenticate: Incorrect API key provided. Please check your API key and try again.")
+            else:
+                st.error(f"An error occurred: {error_message}")
+
+            # Log the error for debugging purposes
+            print(f"An error occurred while generating a response: {error_message}")
+            return None
+
     
     def load_conversation_history(self):
         try:
@@ -140,10 +149,33 @@ class ConversationManager:
         except Exception as e:
             print(f"An unexpected error occurred while resetting the conversation history: {e}")
 
+    def update_api_key(self, new_api_key):
+    # def update_api_key(self):
+        """
+        Update the API key used by the OpenAI client.
+        
+        Parameters:
+        - new_api_key (str): The new API key to use.
+        """
+        self.api_key = new_api_key
+        self.client = OpenAI(api_key=new_api_key)  # Reinitialize the OpenAI client with the new API key
+
+        # Optionally, you might want to log or print a confirmation that the API key has been updated.
+        # print("API key updated successfully.")
+        # print("API key now:", self.api_key)
+
 
 # Streamlit code
 st.title("Welcome to my AI Chatbot!")
 st.header("Enter your name and API key to get started:")
+
+# Initialize ConversationManager
+api_key = ''
+if 'chat_manager' not in st.session_state:
+    # print('API key set to:', api_key)
+    st.session_state['chat_manager'] = ConversationManager(api_key)
+
+chat_manager = st.session_state['chat_manager']
 
 
 # Collect name and API key, store in session state
@@ -154,14 +186,21 @@ with st.expander("Enter your name and API key to get started:", expanded=True):
     else:
         name = st.session_state['name']
 
-    api_key = st.text_input("OpenAI API Key:", type="password")
-    if api_key == secret_password:
-        api_key = st.secrets["OPENAI_API_KEY"]
-    if api_key not in st.session_state:
-        st.session_state['api_key'] = api_key
-    else:
-        api_key = st.session_state['api_key']
-    st.write(api_key)
+    # Collect user's API key
+    new_api_key = st.text_input("OpenAI API Key:", type="password", key="api_key_input")
+
+    # Check if the API key has changed
+    if new_api_key and (not hasattr(st.session_state, 'chat_manager')
+                         or new_api_key != st.session_state.chat_manager.api_key):
+        # Update the API key in the ConversationManager instance
+        if new_api_key == secret_password:
+            # Using a secret password to set the API key from Streamlit secrets
+            st.session_state.chat_manager.update_api_key(st.secrets["OPENAI_API_KEY"])
+        else:
+            st.session_state.chat_manager.update_api_key(new_api_key)
+        
+        # Optionally, show a notification that the API key was updated
+        st.success(f"API key updated successfully.")
 
 # Add explainers
 with st.expander('Why do I need to provide an API key? :confused:'):
@@ -196,12 +235,6 @@ with st.expander('Do you store my API key? Is it safe? :worried:'):
              [here](https://github.com/JosiahBeynon/dq-903). You can also create
              a new API key just for this use, then delete it afterwards.
 ''')
-
-# Initialize ConversationManager
-if 'chat_manager' not in st.session_state:
-    st.session_state['chat_manager'] = ConversationManager(api_key)
-
-chat_manager = st.session_state['chat_manager']
 
 # Create sidebar
 with st.sidebar:
@@ -268,7 +301,7 @@ user_input = st.chat_input(f'Welcome, {name}. How can I help you?')
 # Use chat_manager to get a response. Settings from sidebar
 if user_input:
     response = chat_manager.chat_completion(user_input, temperature=temperature, max_tokens=max_tokens_per_message)
-    st.write('trigger response')
+    # st.write('trigger response')
 
 # Display the conversation history
 for message in conversation_history:
@@ -276,4 +309,4 @@ for message in conversation_history:
         with st.chat_message(message["role"]):
             st.write(message["content"])
 
-st.write(conversation_history)
+# st.write(conversation_history)
