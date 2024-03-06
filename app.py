@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import tiktoken
 import streamlit as st
 from openai import OpenAI
@@ -210,7 +211,7 @@ with st.sidebar:
                             step=0.01,key='temperature'
                              )
     max_tokens = st.slider("Choose max tokens", min_value=5, max_value=2000,
-                            value=200, step=5, key='max_tokens'
+                            step=5, key='max_tokens'
                             )
     st.button("Reset sliders", on_click=reset_sliders)
 
@@ -231,8 +232,10 @@ with st.sidebar:
             # if not custom_message:
             #     st.write("Make sure you've pressed 'Ctrl+Enter' above")
             chat_manager.set_custom_system_message(custom_message)
-            st.write(':tada: Personality updated :tada:')
-            st.write(custom_message)
+            placeholder = st.empty()
+            placeholder.write(':tada: Personality updated :tada:')
+            time.sleep(5)
+            placeholder.empty()
 
 
     if st.sidebar.button("Reset conversation history", on_click=chat_manager.reset_conversation_history):
