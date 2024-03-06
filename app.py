@@ -9,7 +9,7 @@ from datetime import datetime
 secret_password = st.secrets["SECRET_PASSWORD"]
 
 class ConversationManager:
-    def __init__(self, api_key, base_url="https://api.openai.com/v1", history_file=None, default_model="gpt-3.5-turbo", default_temperature=0.7, default_max_tokens=150, token_budget=4096):
+    def __init__(self, api_key, base_url="https://api.openai.com/v1/chat/completions", history_file=None, default_model="gpt-3.5-turbo", default_temperature=0.7, default_max_tokens=150, token_budget=4096):
         self.client = OpenAI(api_key=api_key)
         self.base_url = base_url
         if history_file is None:
@@ -92,18 +92,23 @@ class ConversationManager:
 
         self.enforce_token_budget()
 
-        try:
-            response = self.client.chat.completions.create(
-                model=model,
-                messages=self.conversation_history,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
-        except Exception as e:
-            print(f"An error occurred while generating a response: {e}")
-            return None
+        print('test', temperature, max_tokens, model)
+
+    # try:
+        response = self.client.chat.completions.create(
+            model=model,
+            messages=self.conversation_history,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        print("API Response:", response)  # Debugging line to inspect the raw response
+    # except Exception as e:
+    #     print(f"An error occurred while generating a response: {e}")
+    #     return None
 
         ai_response = response.choices[0].message.content
+        print("Extracted AI Response:", ai_response)  # Debugging line to inspect the extracted response
+
         self.conversation_history.append({"role": "assistant", "content": ai_response})
         self.save_conversation_history()
 
@@ -156,7 +161,9 @@ with st.expander("Enter your name and API key to get started:", expanded=True):
         st.session_state['api_key'] = api_key
     else:
         api_key = st.session_state['api_key']
-    
+    st.write(api_key)
+
+# Add explainers
 with st.expander('Why do I need to provide an API key? :confused:'):
     st.write('''
             Using AI APIs has a very small cost. On an individual scale, it's
@@ -174,7 +181,6 @@ with st.expander('Why do I need to provide an API key? :confused:'):
             create a new key. Then simply paste it in the above box.
 
 ''')
-
 with st.expander('Do you store my API key? Is it safe? :worried:'):
     st.write('''
             I (the developer) have no access to your API key. The app temporarily
@@ -213,7 +219,7 @@ with st.sidebar:
     temperature = st.slider("Select model temperature", min_value=0.0, max_value=1.3,
                             step=0.01,key='temperature'
                              )
-    max_tokens = st.slider("Choose max tokens", min_value=5, max_value=2000,
+    max_tokens_per_message = st.slider("Choose max tokens per message", min_value=5, max_value=2000,
                             step=5, key='max_tokens'
                             )
     st.button("Reset sliders", on_click=reset_sliders)
@@ -223,7 +229,7 @@ with st.sidebar:
                                           ['Default', 'Sassy', 'Angry',
                                            'Thoughtful', 'Custom']
                                           )
-    if system_message == 'Default ':
+    if system_message == 'Default':
         chat_manager.set_persona('default_assistant')
     elif system_message == 'Sassy':
         chat_manager.set_persona('sassy_assistant')
@@ -246,3 +252,28 @@ with st.sidebar:
 
     if st.sidebar.button("Reset conversation history", on_click=chat_manager.reset_conversation_history):
         st.session_state['conversation_history'] = chat_manager.conversation_history
+
+# Build chat function
+# Initialize conversation history
+if 'conversation_history' not in st.session_state:
+    st.session_state['conversation_history'] = chat_manager.conversation_history
+
+conversation_history = st.session_state['conversation_history']
+
+# Require name and api_key for chat to appear
+# if name and api_key:
+# Get chat input
+user_input = st.chat_input(f'Welcome, {name}. How can I help you?')
+
+# Use chat_manager to get a response. Settings from sidebar
+if user_input:
+    response = chat_manager.chat_completion(user_input, temperature=temperature, max_tokens=max_tokens_per_message)
+    st.write('trigger response')
+
+# Display the conversation history
+for message in conversation_history:
+    if message["role"] != "system":
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
+
+st.write(conversation_history)
