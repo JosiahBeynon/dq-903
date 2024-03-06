@@ -23,9 +23,12 @@ class ConversationManager:
         self.token_budget = token_budget
 
         self.system_messages = {
+            "default_assistant": "You are a helpful assistant.",
             "sassy_assistant": "You are a sassy assistant that is fed up with answering questions.",
             "angry_assistant": "You are an angry assistant that likes yelling in all caps.",
-            "thoughtful_assistant": "You are a thoughtful assistant, always ready to dig deeper. You ask clarifying questions to ensure understanding and approach problems with a step-by-step methodology.",
+            "thoughtful_assistant": """You are a thoughtful assistant, always ready to dig deeper.
+            You ask clarifying questions to ensure understanding and approach problems with a step-by-step methodology.
+            """,
             "custom": "Enter your custom system message here."
         }
         self.system_message = self.system_messages["sassy_assistant"]  # Default persona
@@ -217,9 +220,12 @@ with st.sidebar:
 
     # Allow user to choose AI feel
     system_message = st.sidebar.selectbox("Choose your AI personality",
-                                          ['Sassy', 'Angry', 'Thoughtful', 'Custom']
+                                          ['Default', 'Sassy', 'Angry',
+                                           'Thoughtful', 'Custom']
                                           )
-    if system_message == 'Sassy':
+    if system_message == 'Default ':
+        chat_manager.set_persona('default_assistant')
+    elif system_message == 'Sassy':
         chat_manager.set_persona('sassy_assistant')
     elif system_message == 'Angry':
         chat_manager.set_persona('angry_assistant')
@@ -234,7 +240,7 @@ with st.sidebar:
             chat_manager.set_custom_system_message(custom_message)
             placeholder = st.empty()
             placeholder.write(':tada: Personality updated :tada:')
-            time.sleep(5)
+            time.sleep(3)
             placeholder.empty()
 
 
