@@ -347,21 +347,23 @@ if 'conversation_history' not in st.session_state:
 
 conversation_history = st.session_state['conversation_history']
 
-# Require name and api_key for chat to appear
-# if name and api_key:
+# Adjust welcome messaage pased on if name is present
+if name:
+    welcome = f'Welcome, {name}. How can I help you?'
+else:
+    welcome = 'Welcome, how can I help you?'
+
 # Get chat input
-user_input = st.chat_input(f'Welcome, {name}. How can I help you?')
+user_input = st.chat_input(welcome)
 
 # Use chat_manager to get a response. Settings from sidebar
 if user_input:
+    # Spinner activates while waiting with a funny message
     with st.spinner(random.choice(buffer_message)):
         response = chat_manager.chat_completion(user_input, temperature=temperature, max_tokens=max_tokens_per_message)
-        # st.write('trigger response')
 
 # Display the conversation history
 for message in conversation_history:
     if message["role"] != "system":
         with st.chat_message(message["role"]):
             st.write(message["content"])
-
-# st.write(conversation_history)
