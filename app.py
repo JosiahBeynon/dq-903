@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import random
 import tiktoken
 import streamlit as st
 from openai import OpenAI
@@ -8,10 +9,63 @@ from datetime import datetime
 
 secret_password = st.secrets["SECRET_PASSWORD"]
 
+# Options for message while waiting for chat results
+buffer_message = [
+    "Consulting the coffee grounds...",
+    "Asking the nearest crystal ball...",
+    "Deciphering ancient hieroglyphs...",
+    "Interpreting the tea leaves...",
+    "Summoning digital spirits...",
+    "Polishing the crystal ball...",
+    "Conducting a séance with the cloud...",
+    "Bribing the internet gremlins...",
+    "Waiting for the hamsters to power up...",
+    "Dusting off the old magic wand...",
+    "Flipping through the Book of Shadows...",
+    "Consulting the stars and planets...",
+    "Summoning a genie from the web...",
+    "Eavesdropping on the future...",
+    "Channeling my inner fortune teller...",
+    "Peering into the depths of the code...",
+    "Cracking open a fortune cookie...",
+    "Engaging the time travel protocol...",
+    "Tuning into the AI frequencies...",
+    "Warming up the prediction engine..."
+]
+
 class ConversationManager:
+    """
+    Manages conversations with an AI model via the OpenAI API, implementing token budgeting, conversation history tracking, and dynamic persona adjustment.
+
+    Attributes:
+        api_key (str): The API key used to authenticate requests to OpenAI.
+        client (OpenAI): The OpenAI client initialized with the provided API key.
+        base_url (str): The base URL for the OpenAI API. Defaults to 'https://api.openai.com/v1/chat/completions'.
+        history_file (str): The filename where the conversation history is saved. If None, a filename is generated with a timestamp.
+        default_model (str): The default model used for generating completions. Defaults to 'gpt-3.5-turbo'.
+        default_temperature (float): The default sampling temperature for model responses. Defaults to 0.7.
+        default_max_tokens (int): The default maximum number of tokens per completion. Defaults to 150.
+        token_budget (int): The maximum number of tokens that can be used. Exceeding this budget trims the conversation history.
+        system_messages (dict): Predefined system messages corresponding to different assistant personas.
+        system_message (str): The current system message, determining the assistant's persona.
+        conversation_history (list): The history of the conversation, including both user and assistant messages.
+
+    Methods:
+        count_tokens(text): Counts the number of tokens in the given text.
+        total_tokens_used(): Calculates the total number of tokens used in the conversation history.
+        enforce_token_budget(): Removes the earliest messages to stay within the token budget.
+        set_persona(persona): Sets the assistant's persona based on predefined system messages.
+        set_custom_system_message(custom_message): Sets a custom system message for the assistant.
+        update_system_message_in_history(): Updates the system message in the conversation history.
+        chat_completion(prompt, temperature=None, max_tokens=None, model=None): Generates a completion for the given prompt and updates the conversation history.
+        load_conversation_history(): Loads the conversation history from the specified history file.
+        save_conversation_history(): Saves the current conversation history to the specified file.
+        reset_conversation_history(): Resets the conversation history to only include the current system message.
+        update_api_key(new_api_key): Updates the API key used for OpenAI requests.
+    """
+        
     def __init__(self, api_key, base_url="https://api.openai.com/v1/chat/completions", history_file=None, default_model="gpt-3.5-turbo", default_temperature=0.7, default_max_tokens=150, token_budget=4096):
         self.api_key = api_key
-        # self.api_key = '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'
         self.client = OpenAI(api_key=self.api_key)
         self.base_url = base_url
         if history_file is None:
@@ -300,8 +354,9 @@ user_input = st.chat_input(f'Welcome, {name}. How can I help you?')
 
 # Use chat_manager to get a response. Settings from sidebar
 if user_input:
-    response = chat_manager.chat_completion(user_input, temperature=temperature, max_tokens=max_tokens_per_message)
-    # st.write('trigger response')
+    with st.spinner(random.choice(buffer_message)):
+        response = chat_manager.chat_completion(user_input, temperature=temperature, max_tokens=max_tokens_per_message)
+        # st.write('trigger response')
 
 # Display the conversation history
 for message in conversation_history:
