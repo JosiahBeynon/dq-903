@@ -4,3 +4,5 @@ backgroundColor= "#477175"  # Muted teal adding sophistication
 secondaryBackgroundColor="#96401f"  # Rich, burnt orange for secondary elements
 textColor="#d5d6b4"  # Light beige, soft and calming for text
 font="sans serif"  # Maintains the theme's modern and sophisticated vibe
+
+# Palette made via https://sophisticated-palette.streamlit.app/
