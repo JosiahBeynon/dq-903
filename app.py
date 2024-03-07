@@ -5,7 +5,7 @@ import random
 import tiktoken
 import streamlit as st
 from openai import OpenAI
-from datetime import datetime
+from datetime import datetime, timedelta
 
 secret_password = st.secrets["SECRET_PASSWORD"]
 
@@ -214,9 +214,14 @@ class ConversationManager:
         self.api_key = new_api_key
         self.client = OpenAI(api_key=new_api_key)  # Reinitialize the OpenAI client with the new API key
 
-        # Optionally, you might want to log or print a confirmation that the API key has been updated.
-        # print("API key updated successfully.")
-        # print("API key now:", self.api_key)
+
+
+
+
+
+
+
+
 
 
 # Streamlit code
@@ -231,33 +236,33 @@ if 'chat_manager' not in st.session_state:
 
 chat_manager = st.session_state['chat_manager']
 
+# Check if user wants to enter API key
+rate = st.selectbox('Would you like to use the free, rate limited bot, or enter your own API key?',
+             ['Rate limited', 'Enter API key'])
 
-# Collect name and API key, store in session state
-with st.expander("Enter your name and API key to get started:", expanded=True):
-    name = st.text_input("Name:")
-    if name not in st.session_state:
-        st.session_state['name'] = name
-    else:
-        name = st.session_state['name']
 
+# Update the session state with the user's choice if it hasn't been set yet
+# or if the user selects a different option than what's currently saved
+if 'rate' not in st.session_state or st.session_state['rate'] != rate:
+    st.session_state['rate'] = rate
+
+# Set API key based on choice
+if st.session_state['rate'] == 'Rate limited':
+    # Use the predefined OPENAI_API_KEY for the rate-limited version
+    if 'chat_manager' not in st.session_state or st.secrets["OPENAI_API_KEY"] != st.session_state.chat_manager.api_key:
+        st.session_state.chat_manager.update_api_key(st.secrets["OPENAI_API_KEY"])
+    st.info("Using the rate-limited version. You can send up to 3 messages per minute.")
+elif st.session_state['rate'] == 'Enter API key':
     # Collect user's API key
     new_api_key = st.text_input("OpenAI API Key:", type="password", key="api_key_input")
 
-    # Check if the API key has changed
-    if new_api_key and (not hasattr(st.session_state, 'chat_manager')
-                         or new_api_key != st.session_state.chat_manager.api_key):
-        # Update the API key in the ConversationManager instance
-        if new_api_key == secret_password:
-            # Using a secret password to set the API key from Streamlit secrets
-            st.session_state.chat_manager.update_api_key(st.secrets["OPENAI_API_KEY"])
-        else:
-            st.session_state.chat_manager.update_api_key(new_api_key)
-        
-        # Optionally, show a notification that the API key was updated
-        st.success(f"API key updated successfully.")
+    # Update the API key in the ConversationManager instance if it's new or changed
+    if new_api_key and ('chat_manager' not in st.session_state or new_api_key != st.session_state.chat_manager.api_key):
+        st.session_state.chat_manager.update_api_key(new_api_key)
+        st.success("API key updated successfully.")
 
 # Add explainers
-with st.expander('Why do I need to provide an API key? :confused:'):
+with st.expander('Why do I need to provide an API key or be rate limited?'):
     st.write('''
             Using AI APIs has a very small cost. On an individual scale, it's
             barely noticeable (especially as you get free credits on creating
@@ -274,7 +279,7 @@ with st.expander('Why do I need to provide an API key? :confused:'):
             create a new key. Then simply paste it in the above box.
 
 ''')
-with st.expander('Do you store my API key? Is it safe? :worried:'):
+with st.expander('Do you store my API key? Is it safe?'):
     st.write('''
             I (the developer) have no access to your API key. The app temporarily
             stores it as a [sesion state](https://docs.streamlit.io/library/api-reference/session-state).
@@ -345,25 +350,47 @@ with st.sidebar:
 if 'conversation_history' not in st.session_state:
     st.session_state['conversation_history'] = chat_manager.conversation_history
 
+# Initialize timestamp
+if 'message_timestamps' not in st.session_state:
+    st.session_state['message_timestamps'] = []
+
+# Update history
 conversation_history = st.session_state['conversation_history']
 
-# Adjust welcome messaage pased on if name is present
-if name:
-    welcome = f'Welcome, {name}. How can I help you?'
-else:
-    welcome = 'Welcome, how can I help you?'
-
 # Get chat input
-user_input = st.chat_input(welcome)
+user_input = st.chat_input('Welcome, how can I help you?')
 
 # Use chat_manager to get a response. Settings from sidebar
 if user_input:
-    # Spinner activates while waiting with a funny message
-    with st.spinner(random.choice(buffer_message)):
-        response = chat_manager.chat_completion(user_input, temperature=temperature, max_tokens=max_tokens_per_message)
+     # Check for rate limits if the user is using the rate-limited version
+    if st.session_state['rate'] == 'Rate limited':
+        # Get the current time
+        now = datetime.now()
+
+        # Filter out timestamps older than 60 seconds
+        st.session_state['message_timestamps'] = [timestamp for timestamp in st.session_state[
+                                                'message_timestamps'] if now - timestamp < timedelta(minutes=1)
+                                                ]
+    
+        # Check if more than 3 messages have been sent in the last minute
+        if len(st.session_state['message_timestamps']) >= 3:
+            # Inform the user that the rate limit has been exceeded
+            st.error("Rate limit exceeded. Please wait a moment before sending another message.")
+        else:
+            # Add the timestamp of the current message
+            st.session_state['message_timestamps'].append(now)
+
+            # Proceed with sending the message
+            # Spinner activates while waiting with a funny message
+            with st.spinner(random.choice(buffer_message)):
+                response = chat_manager.chat_completion(user_input, temperature=temperature, max_tokens=max_tokens_per_message)
+
+    else: # If not rate limited, proceed as usual
+        with st.spinner(random.choice(buffer_message)):
+            response = chat_manager.chat_completion(user_input, temperature=temperature, max_tokens=max_tokens_per_message)
 
 # Display the conversation history
 for message in conversation_history:
     if message["role"] != "system":
         with st.chat_message(message["role"]):
-            st.write(message["content"])
+            st.markdown(message["content"])

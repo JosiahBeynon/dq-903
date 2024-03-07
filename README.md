@@ -7,5 +7,4 @@ Custom AI Chatbot via Streamlit. Gives the users easy control over `temperature`
 Also allows the user to select a number of preset personalities, or create their own.
 
 ## To-do
-* Add a rate limited option for users that doesn't need an API key
-* Make it more colourful
+* Finish debugging API key option
