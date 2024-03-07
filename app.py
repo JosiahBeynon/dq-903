@@ -55,7 +55,7 @@ class ConversationManager:
         self.client = OpenAI(api_key=self.api_key)
         if history_file is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            self.history_file = f"conversation_history_{timestamp}.json"
+            self.history_file = f"histories/conversation_history_{timestamp}.json"
         else:
             self.history_file = history_file
         self.default_model = default_model
